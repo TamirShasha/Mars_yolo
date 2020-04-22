@@ -1,7 +1,7 @@
+import sys
 from os.path import join
 from shutil import copyfile
 import os
-
 
 
 if __name__ == '__main__':
@@ -11,8 +11,12 @@ if __name__ == '__main__':
 
     out = r'/home/workplace/garage/out/images'
     videos_path = r'/home/general_vol/visDrone/VisDrone2019-VID-train/sequences'
-    videos_list = [f for f in os.listdir(videos_path)]
+    # if you run from terminal.
+    if len(sys.argv) == 3:
+        videos_path = sys.argv[1]
+        out = sys.argv[2]
 
+    videos_list = [f for f in os.listdir(videos_path)]
     for idx, video in enumerate(videos_list):
         print(fr'({idx+1}|{len(videos_list)}) current video: {video}')
         frames = [f for f in os.listdir(join(videos_path, video))]

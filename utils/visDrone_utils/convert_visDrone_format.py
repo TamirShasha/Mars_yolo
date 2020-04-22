@@ -139,6 +139,14 @@ if __name__ == '__main__':
     out = r'/home/workplace/garage/out/labels/'
     annotations_path = r'/home/general_vol/visDrone/VisDrone2019-VID-train/annotations'
     videos_path = r'/home/general_vol/visDrone/VisDrone2019-VID-train/sequences'
+
+    # if you run from terminal
+    if len(sys.argv) == 4:
+        annotations_path = sys.argv[1]
+        videos_path = sys.argv[2]
+        out = sys.argv[3]
+
+
     videos = [f for f in os.listdir(videos_path)]
     for idx, video in enumerate(videos):
         print(fr'({idx+1}|{len(videos)}) current video: {video}')
