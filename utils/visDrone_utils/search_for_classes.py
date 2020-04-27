@@ -5,8 +5,6 @@ import cv2
 import sys
 
 
-
-
 if __name__ == '__main__':
     """
     This script helps you to find videos and frames which contain shown-up of requested class.

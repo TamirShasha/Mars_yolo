@@ -22,10 +22,10 @@ def draw_visDrone(frame, tags, frame_num):
         cls = str(tag[0])
         bbox = np.array(tag[0:5])
 
-        x = int(w * (bbox[1] - bbox[3]))
-        y = int(h * (bbox[2] - bbox[4]))
-        x2 = int(w * (bbox[1] + bbox[3]))
-        y2 = int(h * (bbox[2] + bbox[4]))
+        x = int(w * (bbox[1] - 0.5 * bbox[3]))
+        y = int(h * (bbox[2] - 0.5 * bbox[4]))
+        x2 = int(w * (bbox[1] + 0.5 * bbox[3]))
+        y2 = int(h * (bbox[2] + 0.5 * bbox[4]))
 
         frame = cv2.putText(frame, cls, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,
                             0.5, (0, 255, 0), 2, cv2.LINE_AA)
@@ -40,10 +40,10 @@ if __name__ == '__main__':
     Use this script to draw tags of some frame in visDrone.
     important note: this scrip works with original format of visDrone.
     """
-    frame = r'/home/general_vol/visDrone/VisDrone2019-VID-train/sequences/uav0000071_03240_v/0000001.jpg'
-    tags = r'/home/workplace/garage/out/labels/uav0000071_03240_v_0000001.txt'
+    frame = r'/home/general_vol/workplace/mini_visDrone/images/uav0000086_00000_v_0000001.jpg'
+    tags = r'/home/general_vol/workplace/mini_visDrone/labels/uav0000086_00000_v_0000001.txt'
     frame_num = 1
-    out = r'/home/workplace/garage/out/file.jpg'
+    out = r'/home/workplace/garage/out/labels/coco_.jpg'
     # for terminal control
     if len(sys.argv) == 5:
         frame = sys.argv[1]

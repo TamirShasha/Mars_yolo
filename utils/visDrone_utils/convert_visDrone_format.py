@@ -59,15 +59,14 @@ def absolute_to_relative(x, w, h):
     return x
 
 
-def xywh_to_xcycwchc(tag):
+def xywh_to_cxcywh(tag):
     """
     h = half h, and w = half w
     """
     new_format = tag.copy()
 
-    new_format[:, 2:4] = new_format[:, 2:4] / 2
-    new_format[:, 0] = new_format[:, 0] + new_format[:, 2]
-    new_format[:, 1] = new_format[:, 1] + new_format[:, 3]
+    new_format[:, 0] = new_format[:, 0] + 0.5 * new_format[:, 2]
+    new_format[:, 1] = new_format[:, 1] + 0.5 * new_format[:, 3]
 
     return new_format
 
@@ -95,7 +94,7 @@ def reformat_video_annotations(path, video_width, video_height):
         relative_bboxes = absolute_to_relative(bboxes_array, video_width, video_height)
 
         # YOLO bboxes are xcycwchc.
-        reformat_bboxes = xywh_to_xcycwchc(relative_bboxes)
+        reformat_bboxes = xywh_to_cxcywh(relative_bboxes)
 
         # Round coordinates of bbox.
         reformat_bboxes = np.round_(reformat_bboxes, decimals=6, out=None)
@@ -133,10 +132,10 @@ if __name__ == '__main__':
 
     YOLO (COCO) required format:
     <object_category>,<bbox_left>,<bbox_top>,<bbox_width>,<bbox_height>
-    Bounding box type: xc, yc, 0.5w, 0.5h relative.
+    Bounding box type: xc, yc, w, h relative.
 
     """
-    out = r'/home/workplace/garage/out/labels/'
+    out = r'/home/workplace/garage/out/labels'
     annotations_path = r'/home/general_vol/visDrone/VisDrone2019-VID-train/annotations'
     videos_path = r'/home/general_vol/visDrone/VisDrone2019-VID-train/sequences'
 
@@ -145,7 +144,6 @@ if __name__ == '__main__':
         annotations_path = sys.argv[1]
         videos_path = sys.argv[2]
         out = sys.argv[3]
-
 
     videos = [f for f in os.listdir(videos_path)]
     for idx, video in enumerate(videos):
