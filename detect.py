@@ -5,20 +5,35 @@ from models import *  # set ONNX_EXPORT in models.py
 from utils.datasets import *
 from utils.utils import *
 
-
-def detect(save_img=False):
-    img_size = (320, 192) if ONNX_EXPORT else opt.img_size  # (320, 192) or (416, 256) or (608, 352) for (height, width)
-    out, source, weights, half, view_img, save_txt = opt.output, opt.source, opt.weights, opt.half, opt.view_img, opt.save_txt
+def detect(save_img=False,
+           cfg='cfg/yolov3-spp.cfg',
+           names='data/coco.names',
+           weights='weights/yolov3-spp-ultralytics.pt',
+           source='data/samples',
+           output='output',
+           img_size=512,
+           conf_thres=0.3,
+           iou_thres=0.6,
+           fourcc='mp4v',
+           half=True,
+           device='',
+           view_img=True,
+           save_txt=True,
+           classes=[],
+           agnostic_nms=True,
+           augment=True
+           ):
+    img_size = (320, 192) if ONNX_EXPORT else img_size  # (320, 192) or (416, 256) or (608, 352) for (height, width)
     webcam = source == '0' or source.startswith('rtsp') or source.startswith('http') or source.endswith('.txt')
 
     # Initialize
-    device = torch_utils.select_device(device='cpu' if ONNX_EXPORT else opt.device)
-    if os.path.exists(out):
-        shutil.rmtree(out)  # delete output folder
-    os.makedirs(out)  # make new output folder
+    device = torch_utils.select_device(device='cpu' if ONNX_EXPORT else device)
+    if os.path.exists(output):
+        shutil.rmtree(output)  # delete output folder
+    os.makedirs(output)  # make new output folder
 
     # Initialize model
-    model = Darknet(opt.cfg, img_size)
+    model = Darknet(cfg, img_size)
 
     # Load weights
     attempt_download(weights)
@@ -44,7 +59,7 @@ def detect(save_img=False):
     if ONNX_EXPORT:
         model.fuse()
         img = torch.zeros((1, 3) + img_size)  # (1, 3, 320, 192)
-        f = opt.weights.replace(opt.weights.split('.')[-1], 'onnx')  # *.onnx filename
+        f = weights.replace(weights.split('.')[-1], 'onnx')  # *.onnx filename
         torch.onnx.export(model, img, f, verbose=False, opset_version=11)
 
         # Validate exported model
@@ -70,7 +85,7 @@ def detect(save_img=False):
         dataset = LoadImages(source, img_size=img_size)
 
     # Get names and colors
-    names = load_classes(opt.names)
+    names = load_classes(names)
     colors = [[random.randint(0, 255) for _ in range(3)] for _ in range(len(names))]
 
     # Run inference
@@ -84,7 +99,7 @@ def detect(save_img=False):
 
         # Inference
         t1 = torch_utils.time_synchronized()
-        pred = model(img, augment=opt.augment)[0]
+        pred = model([img], augment=augment)[0]
         t2 = torch_utils.time_synchronized()
 
         # to float
@@ -92,8 +107,8 @@ def detect(save_img=False):
             pred = pred.float()
 
         # Apply NMS
-        pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres,
-                                   multi_label=False, classes=opt.classes, agnostic=opt.agnostic_nms)
+        pred = non_max_suppression(pred, conf_thres, iou_thres,
+                                   multi_label=False, classes=classes, agnostic=agnostic_nms)
 
         # Apply Classifier
         if classify:
@@ -149,13 +164,13 @@ def detect(save_img=False):
                         fps = vid_cap.get(cv2.CAP_PROP_FPS)
                         w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                         h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                        vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*opt.fourcc), fps, (w, h))
+                        vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*fourcc), fps, (w, h))
                     vid_writer.write(im0)
 
     if save_txt or save_img:
-        print('Results saved to %s' % os.getcwd() + os.sep + out)
+        print('Results saved to %s' % os.getcwd() + os.sep + output)
         if platform == 'darwin':  # MacOS
-            os.system('open ' + out + ' ' + save_path)
+            os.system('open ' + output + ' ' + save_path)
 
     print('Done. (%.3fs)' % (time.time() - t0))
 
@@ -182,4 +197,20 @@ if __name__ == '__main__':
     print(opt)
 
     with torch.no_grad():
-        detect()
+        detect(
+           cfg=opt.cfg,
+           names=opt.names,
+           weights=opt.weights,
+           source=opt.source,
+           output=opt.output,
+           img_size=opt.img_size,
+           conf_thres=opt.conf_thres,
+           iou_thres=opt.iou_thres,
+           fourcc=opt.fourcc,
+           half=opt.half,
+           device=opt.device,
+           view_img=opt.view_img,
+           save_txt=opt.save_txt,
+           classes=opt.classes,
+           agnostic_nms=opt.agnostic_nms,
+           augment=opt.augment)

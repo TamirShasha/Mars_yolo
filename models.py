@@ -18,6 +18,10 @@ def create_modules(module_defs, img_size):
     for i, mdef in enumerate(module_defs):
         modules = nn.Sequential()
 
+        if mdef['type'] == 'input':
+            modules = InputLayer(index=mdef['index'])
+            filters = mdef['channels']
+
         if mdef['type'] == 'convolutional':
             bn = mdef['batch_normalize']
             filters = mdef['filters']
@@ -215,6 +219,34 @@ class YOLOLayer(nn.Module):
             return io.view(bs, -1, self.no), p  # view [1, 3, 13, 13, 85] as [1, 507, 85]
 
 
+class InputLayer(nn.Module):
+    def __init__(self, index):
+        super(InputLayer, self).__init__()
+        self.input_index = index
+
+    def __str__(self):  # __unicode__ on Python 2
+        return "InputLayer"
+
+    def forward(self, inputs):
+        return inputs[self.input_index]
+
+
+# class DarknetMotionOS(nn.Module):
+#     def __init__(self, cfg, img_size=(416, 416), verbose=False):
+#         super(DarknetMotionOS, self).__init__()
+#         self.darknet = Darknet(cfg, img_size, verbose)
+#         self.img_layer = InputLayer()
+#         self.motion_layer = InputLayer()
+#         self.img_motion_fusion_layer = WeightedFeatureFusion(layers=[0])
+#
+#     def forward(self, img, motion, augment=False, verbose=False):
+#         img_out = self.img_layer(img)
+#         motion_out = self.motion_layer(motion)
+#         fusion = self.img_motion_fusion.forward(motion_out, [img_out])
+#
+#         preds = self.darknet(fusion)
+#         return preds
+
 class Darknet(nn.Module):
     # YOLOv3 object detection model
 
@@ -230,7 +262,8 @@ class Darknet(nn.Module):
         self.seen = np.array([0], dtype=np.int64)  # (int64) number of images seen during training
         self.info(verbose)  # print model description
 
-    def forward(self, x, augment=False, verbose=False):
+    def forward(self, inputs, augment=False, verbose=False):
+        x = inputs[0]
         img_size = x.shape[-2:]  # height, width
         yolo_out, out = [], []
         if verbose:
@@ -247,7 +280,10 @@ class Darknet(nn.Module):
 
         for i, module in enumerate(self.module_list):
             name = module.__class__.__name__
-            if name in ['WeightedFeatureFusion', 'FeatureConcat']:  # sum, concat
+
+            if name == 'InputLayer': # extract relevant input from inputs list
+                x = module(inputs)
+            elif name in ['WeightedFeatureFusion', 'FeatureConcat']:  # sum, concat
                 if verbose:
                     l = [i - 1] + module.layers  # layers
                     s = [list(x.shape)] + [list(out[i].shape) for i in module.layers]  # shapes
@@ -255,10 +291,11 @@ class Darknet(nn.Module):
                 x = module(x, out)  # WeightedFeatureFusion(), FeatureConcat()
             elif name == 'YOLOLayer':
                 yolo_out.append(module(x, img_size, out))
+            # elif name == ''
             else:  # run module directly, i.e. mtype = 'convolutional', 'upsample', 'maxpool', 'batchnorm2d' etc.
                 x = module(x)
 
-            out.append(x if self.routs[i] else [])
+            out.append(x if self.routs[i] else [])  # saves layer outputs at i'th index of out array
             if verbose:
                 print('%g/%g %s -' % (i, len(self.module_list), name), list(x.shape), str)
                 str = ''
@@ -298,7 +335,6 @@ class Darknet(nn.Module):
 
     def info(self, verbose=False):
         torch_utils.model_info(self, verbose)
-
 
 def get_yolo_layers(model):
     return [i for i, x in enumerate(model.module_defs) if x['type'] == 'yolo']  # [82, 94, 106] for yolov3
@@ -352,6 +388,8 @@ def load_darknet_weights(self, weights, cutoff=-1):
             nw = conv.weight.numel()  # number of weights
             conv.weight.data.copy_(torch.from_numpy(weights[ptr:ptr + nw]).view_as(conv.weight))
             ptr += nw
+
+
 
 
 def save_weights(self, path='model.weights', cutoff=-1):
